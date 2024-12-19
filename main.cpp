@@ -4,18 +4,19 @@
 
 #include <cmath>
 #include <iostream>
+#include <numbers>
 #include <vector>
 
 using namespace std;
 
-const float PI = 3.14159;
-const int width = 120;
-const int height = 30;
-const float asp = (float)width / (float)height;
-const float p_asp = 11.0f / 24.0f;
-const float fNear = 0.1;
-const float fFar = 1000;
-const float FOV = 90;
+constexpr float pi = numbers::pi_v<float>;
+constexpr int width = 120;
+constexpr int height = 30;
+constexpr float asp = (float)width / (float)height;
+constexpr float p_asp = 11.0f / 24.0f;
+constexpr float fNear = 0.1;
+constexpr float fFar = 1000;
+constexpr float FOV = 90;
 
 void draw_line(char* screen, int x1, int y1, int x2, int y2) {
     int x = x1;
@@ -105,8 +106,8 @@ vec3 mat4x4_mult(vec3 i, mat4x4 m) {
 }
 
 const mat4x4 proj_mat(std::vector<std::vector<float>>{
-    {((1 / asp) / p_asp) / tanf(FOV / 2 / 180 * PI),                            0,                             0, 0},
-    {                                             0, 1 / tanf(FOV / 2 / 180 * PI),                             0, 0},
+    {((1 / asp) / p_asp) / tanf(FOV / 2 / 180 * pi),                            0,                             0, 0},
+    {                                             0, 1 / tanf(FOV / 2 / 180 * pi),                             0, 0},
     {                                             0,                            0,         fFar / (fFar - fNear), 1},
     {                                             0,                            0, -fFar* fNear / (fFar - fNear), 0}
 });
