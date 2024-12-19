@@ -6,13 +6,14 @@
 #include <cmath>
 #include <iostream>
 #include <numbers>
+#include <ranges>
 #include <thread>
 #include <vector>
 
 using namespace std;
 
 constexpr float pi = numbers::pi_v<float>;
-constexpr int width_ = 121;
+constexpr int width_n = 121;
 constexpr int width = 120;
 constexpr int height = 30;
 constexpr float asp = (float)width / (float)height;
@@ -39,7 +40,7 @@ void draw_line(char* screen, int x1, int y1, int x2, int y2) {
     int a = 2 * dy;
     int b = 2 * dy - 2 * dx;
     if(y > 0 && y < height && x > 0 && x < width)
-        screen[y * width_ + x] = '@';
+        screen[y * width_n + x] = '@';
 
     for(int i = 0; i < dx; i++) {
         if(e < 0) {
@@ -52,7 +53,7 @@ void draw_line(char* screen, int x1, int y1, int x2, int y2) {
             e += b;
         }
         if(y > 0 && y < height && x > 0 && x < width)
-            screen[y * width_ + x] = '@';
+            screen[y * width_n + x] = '@';
     }
 }
 
@@ -161,51 +162,51 @@ public:
     }
     Rect project() {
         Rect temp = *this;
-        for(int i = 0; i < 4; i++) {
-            temp.points[i].z += 1.5;
-            temp.points[i] = temp.points[i] * proj_mat;
-            temp.points[i].x /= temp.points[i].z;
-            temp.points[i].y /= temp.points[i].z;
+        for(auto&& point: temp.points) {
+            point.z += 1.5;
+            point = point * proj_mat;
+            point.x /= point.z;
+            point.y /= point.z;
         }
         return temp;
     }
     void rotate(float theta) {
-        for(int i = 0; i < 4; i++) {
-            points[i] = points[i] * mat4x4::rot_y(theta);
-            points[i] = points[i] * mat4x4::rot_x(theta * 0.5);
-            points[i] = points[i] * mat4x4::rot_z(theta * 0.5);
+        for(auto&& point: points) {
+            point = point * mat4x4::rot_y(theta);
+            point = point * mat4x4::rot_x(theta * 0.5);
+            point = point * mat4x4::rot_z(theta * 0.5);
         }
     }
 };
 
 class Block {
 public:
-    Rect rects[6];
-    Block(vec3 o) {
-        rects[0] = Rect(vec3(o.x, o.y, o.z), vec3(o.x, o.y + 1, o.z), vec3(o.x + 1, o.y + 1, o.z), vec3(o.x + 1, o.y, o.z));
-        rects[1] = Rect(vec3(o.x + 1, o.y, o.z + 1), vec3(o.x + 1, o.y + 1, o.z + 1), vec3(o.x, o.y + 1, o.z + 1), vec3(o.x, o.y, o.z + 1));
-        rects[2] = Rect(vec3(o.x, o.y + 1, o.z), vec3(o.x, o.y + 1, o.z + 1), vec3(o.x + 1, o.y + 1, o.z + 1), vec3(o.x + 1, o.y + 1, o.z));
-        rects[3] = Rect(vec3(o.x, o.y, o.z + 1), vec3(o.x, o.y, o.z), vec3(o.x + 1, o.y, o.z), vec3(o.x + 1, o.y, o.z + 1));
-        rects[4] = Rect(vec3(o.x, o.y, o.z + 1), vec3(o.x, o.y + 1, o.z + 1), vec3(o.x, o.y + 1, o.z), vec3(o.x, o.y, o.z));
-        rects[5] = Rect(vec3(o.x + 1, o.y, o.z), vec3(o.x + 1, o.y + 1, o.z), vec3(o.x + 1, o.y + 1, o.z + 1), vec3(o.x + 1, o.y, o.z + 1));
-    }
+    Rect rects[6]{};
+    Block(vec3 o)
+        : rects{
+              {{o.x + 0, o.y + 0, o.z + 0}, {o.x + 0, o.y + 1, o.z + 0}, {o.x + 1, o.y + 1, o.z + 0}, {o.x + 1, o.y + 0, o.z + 0}},
+              {{o.x + 1, o.y + 0, o.z + 1}, {o.x + 1, o.y + 1, o.z + 1}, {o.x + 0, o.y + 1, o.z + 1}, {o.x + 0, o.y + 0, o.z + 1}},
+              {{o.x + 0, o.y + 1, o.z + 0}, {o.x + 0, o.y + 1, o.z + 1}, {o.x + 1, o.y + 1, o.z + 1}, {o.x + 1, o.y + 1, o.z + 0}},
+              {{o.x + 0, o.y + 0, o.z + 1}, {o.x + 0, o.y + 0, o.z + 0}, {o.x + 1, o.y + 0, o.z + 0}, {o.x + 1, o.y + 0, o.z + 1}},
+              {{o.x + 0, o.y + 0, o.z + 1}, {o.x + 0, o.y + 1, o.z + 1}, {o.x + 0, o.y + 1, o.z + 0}, {o.x + 0, o.y + 0, o.z + 0}},
+              {{o.x + 1, o.y + 0, o.z + 0}, {o.x + 1, o.y + 1, o.z + 0}, {o.x + 1, o.y + 1, o.z + 1}, {o.x + 1, o.y + 0, o.z + 1}},
+    } { }
     Block project() {
         Block temp = *this;
         for(int i = 0; i < 6; i++) temp.rects[i] = temp.rects[i].project();
         return temp;
     }
     void rotate(float theta) {
-        for(int i = 0; i < 6; i++)
-            rects[i].rotate(theta);
+        for(auto&& rect: rects) rect.rotate(theta);
     }
 };
 
 int main() {
-    char screen[width_ * height + 1];
+    char screen[width_n * height + 1];
     auto clear = [&screen] {
         ranges::fill(screen, ' ');
-        for(int w = 0; w < width_ * height; w += width_) screen[w] = '\n';
-        screen[width_ * height] = '\0';
+        for(int w = 0; w < width_n * height; w += width_n) screen[w] = '\n';
+        screen[width_n * height] = '\0';
     };
 
     Block block(vec3(-0.5, -0.5, -0.5));
@@ -214,12 +215,13 @@ int main() {
         clear();
         block.rotate(0.1 * 3.14159f / 180);
         Block temp = block.project();
-        for(int i = 0; i < 6; i++) {
-            vec3 line1 = block.rects[i].points[1] - block.rects[i].points[0];
-            vec3 line2 = block.rects[i].points[3] - block.rects[i].points[0];
-            vec3 cam_dir(block.rects[i].points[0].x, block.rects[i].points[0].y, block.rects[i].points[0].z + 2);
+        for(int i{}; auto&& rect: block.rects) {
+            vec3 line1 = rect.points[1] - rect.points[0];
+            vec3 line2 = rect.points[3] - rect.points[0];
+            vec3 cam_dir(rect.points[0].x, rect.points[0].y, rect.points[0].z + 2);
             if(dot_prod(cam_dir, cross_prod(line1, line2)) < 0)
                 temp.rects[i].draw(screen);
+            ++i;
         }
         cout << screen << endl;
         this_thread::sleep_for(8ms); // 120fps
