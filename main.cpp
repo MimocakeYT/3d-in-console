@@ -62,28 +62,18 @@ class mat4x4;
 class vec3 {
 public:
     float x{}, y{}, z{}, w{1};
-    friend vec3 operator+(vec3 v1, vec3 v2) { return vec3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z); }
-    friend vec3 operator-(vec3 v1, vec3 v2) { return vec3(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z); }
-    friend vec3 operator*(vec3 v, float f) { return vec3(v.x * f, v.y * f, v.z * f); }
-    friend vec3 operator/(vec3 v, float f) { return vec3(v.x / f, v.y / f, v.z / f); }
-    void operator+=(vec3 v) {
-        x += v.x;
-        y += v.y;
-        z += v.z;
-    }
-    void operator-=(vec3 v) {
-        x -= v.x;
-        y -= v.y;
-        z -= v.z;
-    }
-    void operator*=(float f) {
-        x *= f;
-        y *= f;
-        z *= f;
-    }
+    friend vec3 operator+(vec3 v1, vec3 v2) { return {v1.x + v2.x, v1.y + v2.y, v1.z + v2.z}; }
+    friend vec3 operator-(vec3 v1, vec3 v2) { return {v1.x - v2.x, v1.y - v2.y, v1.z - v2.z}; }
+    friend vec3 operator*(vec3 v, float f) { return {v.x * f, v.y * f, v.z * f}; }
+    friend vec3 operator/(vec3 v, float f) { return {v.x / f, v.y / f, v.z / f}; }
+
+    void operator+=(vec3 v) { x += v.x, y += v.y, z += v.z; }
+    void operator-=(vec3 v) { x -= v.x, y -= v.y, z -= v.z; }
+    void operator*=(float f) { x *= f, y *= f, z *= f; }
     void operator/=(float f) { x /= f, y /= f, z /= f; }
+
     friend float dot_prod(vec3 v1, vec3 v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
-    friend vec3 cross_prod(vec3 a, vec3 b) { return vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
+    friend vec3 cross_prod(vec3 a, vec3 b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
     void norm() { *this /= sqrt(x * x + y * y + z * z); }
 
     vec3 operator*(const mat4x4& m);
