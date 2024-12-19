@@ -3,46 +3,57 @@
 // https://github.com/Mimocake/Minecraft-Grib-Edition
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <codecvt>
 #include <iostream>
+#include <locale>
 #include <numbers>
 #include <ranges>
 #include <thread>
-#include <vector>
 
 using namespace std;
 
 constexpr float pi = numbers::pi_v<float>;
-constexpr int width_n = 121;
-constexpr int width = 120;
-constexpr int height = 30;
-constexpr float asp = (float)width / (float)height;
-constexpr float p_asp = 11.0f / 24.0f;
+constexpr int width = 200;
+constexpr int height = width * (9. / 16 / 2);
+
+constexpr int width_n = width + 1;  // + \n
+constexpr int height2 = height * 2; // + subpixel
+
+constexpr float asp = (float)width / (float)height2;
+// constexpr float p_asp = 11.0f / 24.0f;
 constexpr float fNear = 0.1;
 constexpr float fFar = 1000;
 constexpr float FOV = 90;
 
-void draw_line(char* screen, int x1, int y1, int x2, int y2) {
+void draw_line(char16_t* screen, int x1, int y1, int x2, int y2) {
     int x = x1;
     int y = y1;
     int dx = abs(x2 - x1);
     int dy = abs(y2 - y1);
-    int sx = ((x2 - x1) == 0) ? 0 : ((x2 - x1) > 0 ? 1 : -1);
-    int sy = ((y2 - y1) == 0) ? 0 : ((y2 - y1) > 0 ? 1 : -1);
-    int in;
-    if(dy > dx) {
-        int t = dy;
-        dy = dx;
-        dx = t;
-        in = 1;
-    } else in = 0;
-    float e = 2 * dy - dx;
-    int a = 2 * dy;
-    int b = 2 * dy - 2 * dx;
-    if(y > 0 && y < height && x > 0 && x < width)
-        screen[y * width_n + x] = '@';
+    const int sx = ((x2 - x1) == 0) ? 0 : ((x2 - x1) > 0 ? 1 : -1);
+    const int sy = ((y2 - y1) == 0) ? 0 : ((y2 - y1) > 0 ? 1 : -1);
 
-    for(int i = 0; i < dx; i++) {
+    const int in = dy > dx;
+    if(in) swap(dx, dy);
+
+    float e = 2 * dy - dx;
+    const int a = 2 * dy;
+    const int b = 2 * dy - 2 * dx;
+
+    auto draw = [&] {
+        int up = y % 2;
+        const int ty = y >> 1;
+        if(ty > 0 && ty < height && x > 0 && x < width) {
+            if(screen[ty * width_n + x] != ' ') up = 2;
+            screen[ty * width_n + x] = u"▀▄█"[up];
+        }
+    };
+
+    draw();
+
+    for(int i{}; i < dx; i++) {
         if(e < 0) {
             if(in == 1) y += sy;
             else x += sx;
@@ -52,8 +63,7 @@ void draw_line(char* screen, int x1, int y1, int x2, int y2) {
             x += sx;
             e += b;
         }
-        if(y > 0 && y < height && x > 0 && x < width)
-            screen[y * width_n + x] = '@';
+        draw();
     }
 }
 
@@ -127,7 +137,7 @@ vec3 vec3::operator*(const mat4x4& m) {
 }
 
 const mat4x4 proj_mat{
-    ((1 / asp) / p_asp) / tanf(FOV / 2 / 180 * pi), 0, 0, 0,
+    ((1 / asp) /* / p_asp */) / tanf(FOV / 2 / 180 * pi), 0, 0, 0,
     0, 1 / tanf(FOV / 2 / 180 * pi), 0, 0,
     0, 0, fFar / (fFar - fNear), 1,
     0, 0, -fFar* fNear / (fFar - fNear), 0 //
@@ -140,15 +150,21 @@ public:
     Rect(vec3 p1, vec3 p2, vec3 p3, vec3 p4)
         : points{p1, p2, p3, p4} { }
 
-    void draw(char* screen) {
-        draw_line(screen, (points[0].x + 1) * (width / 2), (points[0].y + 1) * (height / 2),
-            (points[1].x + 1) * (width / 2), (points[1].y + 1) * (height / 2));
-        draw_line(screen, (points[1].x + 1) * (width / 2), (points[1].y + 1) * (height / 2),
-            (points[2].x + 1) * (width / 2), (points[2].y + 1) * (height / 2));
-        draw_line(screen, (points[2].x + 1) * (width / 2), (points[2].y + 1) * (height / 2),
-            (points[3].x + 1) * (width / 2), (points[3].y + 1) * (height / 2));
-        draw_line(screen, (points[3].x + 1) * (width / 2), (points[3].y + 1) * (height / 2),
-            (points[0].x + 1) * (width / 2), (points[0].y + 1) * (height / 2));
+    void draw(char16_t* screen) {
+        const int hw = width / 2;
+        const int hh = height2 / 2;
+        draw_line(screen,
+            (points[0].x + 1) * hw, (points[0].y + 1) * hh,
+            (points[1].x + 1) * hw, (points[1].y + 1) * hh);
+        draw_line(screen,
+            (points[1].x + 1) * hw, (points[1].y + 1) * hh,
+            (points[2].x + 1) * hw, (points[2].y + 1) * hh);
+        draw_line(screen,
+            (points[2].x + 1) * hw, (points[2].y + 1) * hh,
+            (points[3].x + 1) * hw, (points[3].y + 1) * hh);
+        draw_line(screen,
+            (points[3].x + 1) * hw, (points[3].y + 1) * hh,
+            (points[0].x + 1) * hw, (points[0].y + 1) * hh);
     }
     Rect project() {
         Rect temp = *this;
@@ -171,7 +187,7 @@ public:
 
 class Block {
 public:
-    Rect rects[6]{};
+    Rect rects[6];
     Block(vec3 o)
         : rects{
               {{o.x + 0, o.y + 0, o.z + 0}, {o.x + 0, o.y + 1, o.z + 0}, {o.x + 1, o.y + 1, o.z + 0}, {o.x + 1, o.y + 0, o.z + 0}},
@@ -191,29 +207,55 @@ public:
     }
 };
 
+struct Timer {
+    using clock = chrono::high_resolution_clock;
+    decltype(clock::now()) t1 = clock::now();
+    static inline decltype(clock::now() - t1) elapsed_;
+    static inline decltype(clock::now() - t1) avg;
+    static auto elapsed() {
+        return chrono::duration_cast<chrono::microseconds>(Timer::elapsed_);
+    };
+    static auto elapsed_avg() {
+        return chrono::duration_cast<chrono::microseconds>(Timer::avg);
+    };
+    ~Timer() {
+        elapsed_ = clock::now() - t1;
+        if(!avg.count()) avg = elapsed_;
+        avg = (avg * 999 + elapsed_) / 1000;
+    }
+};
+
 int main() {
-    char screen[width_n * height + 1];
+    char16_t screen[width_n * height + 1];
     auto clear = [&screen] {
         ranges::fill(screen, ' ');
-        for(int w = 0; w < width_n * height; w += width_n) screen[w] = '\n';
+        for(auto&& row: screen
+                | ranges::views::stride(width_n)
+                | ranges::views::drop(1)) row = '\n';
         screen[width_n * height] = '\0';
     };
 
     Block block(vec3(-0.5, -0.5, -0.5));
     block.rotate(180 * 3.14159f / 180);
     for(;;) {
-        clear();
-        block.rotate(0.1 * 3.14159f / 180);
-        Block temp = block.project();
-        for(int i{}; auto&& rect: block.rects) {
-            vec3 line1 = rect.points[1] - rect.points[0];
-            vec3 line2 = rect.points[3] - rect.points[0];
-            vec3 cam_dir(rect.points[0].x, rect.points[0].y, rect.points[0].z + 2);
-            if(dot_prod(cam_dir, cross_prod(line1, line2)) < 0)
-                temp.rects[i].draw(screen);
-            ++i;
+        {
+            Timer t{};
+            clear();
+            block.rotate(0.1 * 3.14159f / 180);
+            Block temp = block.project();
+            for(int i{}; auto&& rect: block.rects) {
+                vec3 line1 = rect.points[1] - rect.points[0];
+                vec3 line2 = rect.points[3] - rect.points[0];
+                vec3 cam_dir(rect.points[0].x, rect.points[0].y, rect.points[0].z + 2);
+                if(dot_prod(cam_dir, cross_prod(line1, line2)) < 0)
+                    temp.rects[i].draw(screen);
+                ++i;
+            }
         }
-        cout << screen << endl;
+        cout << std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(screen)
+             << endl
+             << Timer::elapsed_avg()
+             << endl;
         this_thread::sleep_for(8ms); // 120fps
     }
     getchar();
