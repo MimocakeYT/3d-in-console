@@ -2,19 +2,30 @@
 // Если вы хотите реальное 3д можете перейти в мой другой репозиторий
 // https://github.com/Mimocake/Minecraft-Grib-Edition
 
-#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <codecvt>
 #include <iostream>
-#include <locale>
 #include <numbers>
 #include <ranges>
 #include <thread>
 
-using namespace std;
+// using
+using std::cout;
+using std::endl;
+using std::swap;
+using namespace std::literals;
 
+// alias
+namespace numbers = std::numbers;
+namespace this_thread = std::this_thread;
+namespace chr = std::chrono;
+namespace ranges = std::ranges;
+namespace views = ranges::views;
+
+// constants
 constexpr float pi = numbers::pi_v<float>;
+constexpr float to_rad = pi / 180.f;
 constexpr int width = 200;
 constexpr int height = width * (9. / 16 / 2);
 
@@ -96,31 +107,31 @@ public:
     static mat4x4 rot_x(float fAngleRad) {
         mat4x4 matrix;
         matrix.m[0][0] = 1.0f;
-        matrix.m[1][1] = cosf(fAngleRad);
-        matrix.m[1][2] = sinf(fAngleRad);
-        matrix.m[2][1] = -sinf(fAngleRad);
-        matrix.m[2][2] = cosf(fAngleRad);
+        matrix.m[1][1] = cos(fAngleRad);
+        matrix.m[1][2] = sin(fAngleRad);
+        matrix.m[2][1] = -sin(fAngleRad);
+        matrix.m[2][2] = cos(fAngleRad);
         matrix.m[3][3] = 1.0f;
         return matrix;
     }
 
     static mat4x4 rot_y(float fAngleRad) {
         mat4x4 matrix;
-        matrix.m[0][0] = cosf(fAngleRad);
-        matrix.m[0][2] = sinf(fAngleRad);
-        matrix.m[2][0] = -sinf(fAngleRad);
+        matrix.m[0][0] = cos(fAngleRad);
+        matrix.m[0][2] = sin(fAngleRad);
+        matrix.m[2][0] = -sin(fAngleRad);
         matrix.m[1][1] = 1.0f;
-        matrix.m[2][2] = cosf(fAngleRad);
+        matrix.m[2][2] = cos(fAngleRad);
         matrix.m[3][3] = 1.0f;
         return matrix;
     }
 
     static mat4x4 rot_z(float fAngleRad) {
         mat4x4 matrix;
-        matrix.m[0][0] = cosf(fAngleRad);
-        matrix.m[0][1] = sinf(fAngleRad);
-        matrix.m[1][0] = -sinf(fAngleRad);
-        matrix.m[1][1] = cosf(fAngleRad);
+        matrix.m[0][0] = cos(fAngleRad);
+        matrix.m[0][1] = sin(fAngleRad);
+        matrix.m[1][0] = -sin(fAngleRad);
+        matrix.m[1][1] = cos(fAngleRad);
         matrix.m[2][2] = 1.0f;
         matrix.m[3][3] = 1.0f;
         return matrix;
@@ -137,8 +148,8 @@ vec3 vec3::operator*(const mat4x4& m) {
 }
 
 const mat4x4 proj_mat{
-    ((1 / asp) /* / p_asp */) / tanf(FOV / 2 / 180 * pi), 0, 0, 0,
-    0, 1 / tanf(FOV / 2 / 180 * pi), 0, 0,
+    ((1 / asp) /* / p_asp */) / tanf(FOV / 2 * to_rad), 0, 0, 0,
+    0, 1 / tanf(FOV / 2 * to_rad), 0, 0,
     0, 0, fFar / (fFar - fNear), 1,
     0, 0, -fFar* fNear / (fFar - fNear), 0 //
 };
@@ -208,15 +219,15 @@ public:
 };
 
 struct Timer {
-    using clock = chrono::high_resolution_clock;
+    using clock = chr::high_resolution_clock;
     decltype(clock::now()) t1 = clock::now();
     static inline decltype(clock::now() - t1) elapsed_;
     static inline decltype(clock::now() - t1) avg;
     static auto elapsed() {
-        return chrono::duration_cast<chrono::microseconds>(Timer::elapsed_);
+        return chr::duration_cast<chr::microseconds>(Timer::elapsed_);
     };
     static auto elapsed_avg() {
-        return chrono::duration_cast<chrono::microseconds>(Timer::avg);
+        return chr::duration_cast<chr::microseconds>(Timer::avg);
     };
     ~Timer() {
         elapsed_ = clock::now() - t1;
@@ -230,18 +241,18 @@ int main() {
     auto clear = [&screen] {
         ranges::fill(screen, ' ');
         for(auto&& row: screen
-                | ranges::views::stride(width_n)
-                | ranges::views::drop(1)) row = '\n';
+                | views::stride(width_n)
+                | views::drop(1)) row = '\n';
         screen[width_n * height] = '\0';
     };
 
     Block block(vec3(-0.5, -0.5, -0.5));
-    block.rotate(180 * 3.14159f / 180);
+    block.rotate(180 * to_rad);
     for(;;) {
         {
             Timer t{};
             clear();
-            block.rotate(0.1 * 3.14159f / 180);
+            block.rotate(0.2 * to_rad);
             Block temp = block.project();
             for(int i{}; auto&& rect: block.rects) {
                 vec3 line1 = rect.points[1] - rect.points[0];
@@ -256,7 +267,7 @@ int main() {
              << endl
              << Timer::elapsed_avg()
              << endl;
-        this_thread::sleep_for(8ms); // 120fps
+        this_thread::sleep_for(16ms); // 60fps
     }
     getchar();
 }
