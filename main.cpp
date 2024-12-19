@@ -1,5 +1,5 @@
-// Этот проект я сделал по приколу и поэтому код тут очень упрощенный и кривой
-// Если вы хотите реальное 3д можете перейти в мой другой репозиторий
+// Р­С‚РѕС‚ РїСЂРѕРµРєС‚ СЏ СЃРґРµР»Р°Р» РїРѕ РїСЂРёРєРѕР»Сѓ Рё РїРѕСЌС‚РѕРјСѓ РєРѕРґ С‚СѓС‚ РѕС‡РµРЅСЊ СѓРїСЂРѕС‰РµРЅРЅС‹Р№ Рё РєСЂРёРІРѕР№
+// Р•СЃР»Рё РІС‹ С…РѕС‚РёС‚Рµ СЂРµР°Р»СЊРЅРѕРµ 3Рґ РјРѕР¶РµС‚Рµ РїРµСЂРµР№С‚Рё РІ РјРѕР№ РґСЂСѓРіРѕР№ СЂРµРїРѕР·РёС‚РѕСЂРёР№
 // https://github.com/Mimocake/Minecraft-Grib-Edition
 
 #include <cmath>
@@ -53,13 +53,11 @@ void draw_line(char* screen, int x1, int y1, int x2, int y2) {
     }
 }
 
+class mat4x4;
+
 class vec3 {
 public:
-    float x, y, z, w;
-    vec3()
-        : x(0), y(0), z(0), w(1) { }
-    vec3(float xx, float yy, float zz)
-        : x(xx), y(yy), z(zz), w(1) { }
+    float x{}, y{}, z{}, w{1};
     friend vec3 operator+(vec3 v1, vec3 v2) { return vec3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z); }
     friend vec3 operator-(vec3 v1, vec3 v2) { return vec3(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z); }
     friend vec3 operator*(vec3 v, float f) { return vec3(v.x * f, v.y * f, v.z * f); }
@@ -83,80 +81,71 @@ public:
     friend float dot_prod(vec3 v1, vec3 v2) { return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z; }
     friend vec3 cross_prod(vec3 a, vec3 b) { return vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
     void norm() { *this /= sqrt(x * x + y * y + z * z); }
+
+    vec3 operator*(const mat4x4& m);
 };
 
 class mat4x4 {
 public:
-    float m[4][4] = {0};
-    mat4x4() { }
-    mat4x4(vector<vector<float>> v) {
-        for(int i = 0; i < 4; i++)
-            for(int j = 0; j < 4; j++)
-                m[i][j] = v[i][j];
+    float m[4][4]{};
+
+    static mat4x4 rot_x(float fAngleRad) {
+        mat4x4 matrix;
+        matrix.m[0][0] = 1.0f;
+        matrix.m[1][1] = cosf(fAngleRad);
+        matrix.m[1][2] = sinf(fAngleRad);
+        matrix.m[2][1] = -sinf(fAngleRad);
+        matrix.m[2][2] = cosf(fAngleRad);
+        matrix.m[3][3] = 1.0f;
+        return matrix;
+    }
+
+    static mat4x4 rot_y(float fAngleRad) {
+        mat4x4 matrix;
+        matrix.m[0][0] = cosf(fAngleRad);
+        matrix.m[0][2] = sinf(fAngleRad);
+        matrix.m[2][0] = -sinf(fAngleRad);
+        matrix.m[1][1] = 1.0f;
+        matrix.m[2][2] = cosf(fAngleRad);
+        matrix.m[3][3] = 1.0f;
+        return matrix;
+    }
+
+    static mat4x4 rot_z(float fAngleRad) {
+        mat4x4 matrix;
+        matrix.m[0][0] = cosf(fAngleRad);
+        matrix.m[0][1] = sinf(fAngleRad);
+        matrix.m[1][0] = -sinf(fAngleRad);
+        matrix.m[1][1] = cosf(fAngleRad);
+        matrix.m[2][2] = 1.0f;
+        matrix.m[3][3] = 1.0f;
+        return matrix;
     }
 };
 
-vec3 mat4x4_mult(vec3 i, mat4x4 m) {
-    vec3 v;
-    v.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + i.w * m.m[3][0];
-    v.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + i.w * m.m[3][1];
-    v.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + i.w * m.m[3][2];
-    v.w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + i.w * m.m[3][3];
-    return v;
+vec3 vec3::operator*(const mat4x4& m) {
+    return {
+        .x = x * m.m[0][0] + y * m.m[1][0] + z * m.m[2][0] + w * m.m[3][0],
+        .y = x * m.m[0][1] + y * m.m[1][1] + z * m.m[2][1] + w * m.m[3][1],
+        .z = x * m.m[0][2] + y * m.m[1][2] + z * m.m[2][2] + w * m.m[3][2],
+        .w = x * m.m[0][3] + y * m.m[1][3] + z * m.m[2][3] + w * m.m[3][3],
+    };
 }
 
-const mat4x4 proj_mat(std::vector<std::vector<float>>{
-    {((1 / asp) / p_asp) / tanf(FOV / 2 / 180 * pi),                            0,                             0, 0},
-    {                                             0, 1 / tanf(FOV / 2 / 180 * pi),                             0, 0},
-    {                                             0,                            0,         fFar / (fFar - fNear), 1},
-    {                                             0,                            0, -fFar* fNear / (fFar - fNear), 0}
-});
-
-mat4x4 rot_x(float fAngleRad) {
-    mat4x4 matrix;
-    matrix.m[0][0] = 1.0f;
-    matrix.m[1][1] = cosf(fAngleRad);
-    matrix.m[1][2] = sinf(fAngleRad);
-    matrix.m[2][1] = -sinf(fAngleRad);
-    matrix.m[2][2] = cosf(fAngleRad);
-    matrix.m[3][3] = 1.0f;
-    return matrix;
-}
-
-mat4x4 rot_y(float fAngleRad) {
-    mat4x4 matrix;
-    matrix.m[0][0] = cosf(fAngleRad);
-    matrix.m[0][2] = sinf(fAngleRad);
-    matrix.m[2][0] = -sinf(fAngleRad);
-    matrix.m[1][1] = 1.0f;
-    matrix.m[2][2] = cosf(fAngleRad);
-    matrix.m[3][3] = 1.0f;
-    return matrix;
-}
-
-mat4x4 rot_z(float fAngleRad) {
-    mat4x4 matrix;
-    matrix.m[0][0] = cosf(fAngleRad);
-    matrix.m[0][1] = sinf(fAngleRad);
-    matrix.m[1][0] = -sinf(fAngleRad);
-    matrix.m[1][1] = cosf(fAngleRad);
-    matrix.m[2][2] = 1.0f;
-    matrix.m[3][3] = 1.0f;
-    return matrix;
-}
+const mat4x4 proj_mat{
+    ((1 / asp) / p_asp) / tanf(FOV / 2 / 180 * pi), 0, 0, 0,
+    0, 1 / tanf(FOV / 2 / 180 * pi), 0, 0,
+    0, 0, fFar / (fFar - fNear), 1,
+    0, 0, -fFar* fNear / (fFar - fNear), 0 //
+};
 
 class Rect {
 public:
-    vec3 points[4] = {vec3()};
-    Rect() {
-        for(int i = 0; i < 4; i++) points[i] = vec3();
-    }
-    Rect(vec3 p1, vec3 p2, vec3 p3, vec3 p4) {
-        points[0] = p1;
-        points[1] = p2;
-        points[2] = p3;
-        points[3] = p4;
-    }
+    vec3 points[4]{};
+    Rect() { }
+    Rect(vec3 p1, vec3 p2, vec3 p3, vec3 p4)
+        : points{p1, p2, p3, p4} { }
+
     void draw(char* screen) {
         draw_line(screen, (points[0].x + 1) * (width / 2), (points[0].y + 1) * (height / 2),
             (points[1].x + 1) * (width / 2), (points[1].y + 1) * (height / 2));
@@ -171,7 +160,7 @@ public:
         Rect temp = *this;
         for(int i = 0; i < 4; i++) {
             temp.points[i].z += 1.5;
-            temp.points[i] = mat4x4_mult(temp.points[i], proj_mat);
+            temp.points[i] = temp.points[i] * proj_mat;
             temp.points[i].x /= temp.points[i].z;
             temp.points[i].y /= temp.points[i].z;
         }
@@ -179,9 +168,9 @@ public:
     }
     void rotate(float theta) {
         for(int i = 0; i < 4; i++) {
-            points[i] = mat4x4_mult(points[i], rot_y(theta));
-            points[i] = mat4x4_mult(points[i], rot_x(theta * 0.5));
-            points[i] = mat4x4_mult(points[i], rot_z(theta * 0.5));
+            points[i] = points[i] * mat4x4::rot_y(theta);
+            points[i] = points[i] * mat4x4::rot_x(theta * 0.5);
+            points[i] = points[i] * mat4x4::rot_z(theta * 0.5);
         }
     }
 };
