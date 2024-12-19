@@ -2,14 +2,17 @@
 // Если вы хотите реальное 3д можете перейти в мой другой репозиторий
 // https://github.com/Mimocake/Minecraft-Grib-Edition
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <numbers>
+#include <thread>
 #include <vector>
 
 using namespace std;
 
 constexpr float pi = numbers::pi_v<float>;
+constexpr int width_ = 121;
 constexpr int width = 120;
 constexpr int height = 30;
 constexpr float asp = (float)width / (float)height;
@@ -36,7 +39,7 @@ void draw_line(char* screen, int x1, int y1, int x2, int y2) {
     int a = 2 * dy;
     int b = 2 * dy - 2 * dx;
     if(y > 0 && y < height && x > 0 && x < width)
-        screen[y * width + x] = '@';
+        screen[y * width_ + x] = '@';
 
     for(int i = 0; i < dx; i++) {
         if(e < 0) {
@@ -49,7 +52,7 @@ void draw_line(char* screen, int x1, int y1, int x2, int y2) {
             e += b;
         }
         if(y > 0 && y < height && x > 0 && x < width)
-            screen[y * width + x] = '@';
+            screen[y * width_ + x] = '@';
     }
 }
 
@@ -198,15 +201,17 @@ public:
 };
 
 int main() {
-    char screen[width * height + 1];
-    screen[width * height] = '\0';
-    for(int i = 0; i < width * height; i++)
-        screen[i] = ' ';
+    char screen[width_ * height + 1];
+    auto clear = [&screen] {
+        ranges::fill(screen, ' ');
+        for(int w = 0; w < width_ * height; w += width_) screen[w] = '\n';
+        screen[width_ * height] = '\0';
+    };
+
     Block block(vec3(-0.5, -0.5, -0.5));
     block.rotate(180 * 3.14159f / 180);
     for(;;) {
-        for(int j = 0; j < width * height; j++)
-            screen[j] = ' ';
+        clear();
         block.rotate(0.1 * 3.14159f / 180);
         Block temp = block.project();
         for(int i = 0; i < 6; i++) {
@@ -216,7 +221,8 @@ int main() {
             if(dot_prod(cam_dir, cross_prod(line1, line2)) < 0)
                 temp.rects[i].draw(screen);
         }
-        cout << screen;
+        cout << screen << endl;
+        this_thread::sleep_for(8ms); // 120fps
     }
     getchar();
 }
